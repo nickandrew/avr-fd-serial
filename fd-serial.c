@@ -14,9 +14,7 @@
 
 #include "fd-serial.h"
 
-#if SERIAL_CYCLES == 1
-static const unsigned char prescaler = 1<<CS11 | 1<<CS10; // Divide by 4
-#else
+#if SERIAL_CYCLES != 1
 #error "SERIAL_CYCLES only works with 1 at present"
 #endif
 
@@ -40,7 +38,7 @@ static struct fd_uart fd_uart1;
 
 static void _starttimer(void) {
 
-	TCCR1 |= prescaler;
+	TCCR1 |= PRESCALER;
 }
 
 /*
@@ -50,7 +48,7 @@ static void _starttimer(void) {
 
 static void _stoptimer(void) {
 
-	TCCR1 &= ~prescaler;
+	TCCR1 &= ~PRESCALER;
 }
 
 /*
