@@ -11,6 +11,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <stdint.h>
 
 #include "fd-serial.h"
 
@@ -81,8 +82,8 @@ static void _disable_int0(void) {
 */
 
 void fdserial_init(void) {
-	unsigned char com_mode = 0<<COM1A1 | 0<<COM1A0;
-	unsigned char ctc_mode = 1<<CTC1;
+	uint8_t com_mode = 0<<COM1A1 | 0<<COM1A0;
+	uint8_t ctc_mode = 1<<CTC1;
 
 	fd_uart1.send_ready = 1;
 	fd_uart1.tx_state = 0;
@@ -116,7 +117,7 @@ void fdserial_init(void) {
 **    Return true if a character has been received on the receive interface.
 */
 
-unsigned int fdserial_available(void) {
+uint8_t fdserial_available(void) {
 	return fd_uart1.available;
 }
 
@@ -125,7 +126,7 @@ unsigned int fdserial_available(void) {
 **    Return true if the transmit interface is free to transmit a character
 */
 
-unsigned int fdserial_sendok(void) {
+uint8_t fdserial_sendok(void) {
 	return fd_uart1.send_ready;
 }
 
