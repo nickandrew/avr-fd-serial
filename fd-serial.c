@@ -19,9 +19,14 @@
 #error "SERIAL_CYCLES only works with 1 at present"
 #endif
 
+#ifndef CPU_FREQ
+#define CPU_FREQ 8000000
+#endif
+
 #if SERIAL_RATE == 9600
 // Prescaler CK/4
 #define PRESCALER (1<<CS11 | 1<<CS10)
+#define PRESCALER_DIVISOR 4
 // 8000000 / PRESCALER / 9600 = 208.333
 #define SERIAL_TOP 207
 #else
@@ -169,6 +174,47 @@ unsigned char fdserial_recv() {
 	return c;
 }
 
+
+/*
+**  fdserial_alarm(uint32_t duration)
+**
+**  Keep the transmit system busy for the specified number of ms.
+**
+**  Wait until the transmit state is idle, then setup the
+**  transmit bit comparator to count down.
+*/
+
+void fdserial_alarm(uint32_t duration) {
+	uint32_t timer_ticks = ( duration * CPU_FREQ ) / PRESCALER_DIVISOR / 1000;
+	uint32_t cycles = timer_ticks / ( SERIAL_TOP + 1);
+	uint8_t remainder = timer_ticks - (cycles * (SERIAL_TOP + 1));
+	// Wait until available
+	while (! fd_uart1.send_ready) { }
+
+	OCR1A = TCNT1 - remainder;
+	fd_uart1.delay = cycles;
+	fd_uart1.send_ready = 0;
+	fd_uart1.tx_state = 5;
+}
+
+/*
+**  fdserial_delay(uint32_t duration)
+**
+**  Delay for the specified number of ms.
+**
+**  Setup an alarm for the specified duration, then
+**  spin until the alarm has expired (transmit state
+**  has returned to idle).
+*/
+
+void fdserial_delay(uint32_t duration) {
+	fdserial_alarm(duration);
+
+	// Wait until alarm expires
+	while (! fd_uart1.send_ready) { }
+}
+
+
 // Interrupt routine for timer1, TCCR1A, tx bits
 
 ISR(TIMER1_COMPA_vect)
@@ -214,6 +260,12 @@ ISR(TIMER1_COMPA_vect)
 		case 4: // Return to idle mode
 			fd_uart1.send_ready = 1;
 			fd_uart1.tx_state = 0;
+			return;
+		case 5: // Timed delay
+			if (! --fd_uart1.delay) {
+				fd_uart1.send_ready = 1;
+				fd_uart1.tx_state = 0;
+			}
 			return;
 	}
 }
