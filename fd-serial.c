@@ -118,8 +118,6 @@ void fdserial_init(void) {
 
 	// Interrupt per rx or tx bit
 	TIMSK |= 1<<OCIE1A | 1<<OCIE1B;
-	TIFR |= 1<<TOV1;
-	TIMSK |= 1<<TOIE1;
 
 	// Output pin PB3, and raise it
 	DDRB |= 1<<PORTB3;
@@ -127,7 +125,6 @@ void fdserial_init(void) {
 
 	_stoptimer();
 	TCCR1 = ctc_mode | com_mode;
-	GTCCR |= 1<<PWM1B;
 	_starttimer();
 	_enable_int0();
 }
@@ -289,28 +286,9 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(TIMER1_COMPB_vect)
 {
-	uint8_t tcnt1 = TCNT1;
 	// Read the bit as early as possible, to try to hit the
 	// center mark
 	uint8_t read_bit = PINB & (1<<PORTB2);
-	uint8_t cy = cycle_count;
-
-#if SERIAL_CYCLES != 1
-	if (! --fd_uart1.rx_cycle) {
-		// Ignore this inter-bit interrupt
-		return;
-	}
-
-	// Reset it to the multiple of the bit frequency
-	fd_uart1.rx_cycle = SERIAL_CYCLES;
-#endif
-
-	if (fd_uart1.rx_state > 0 && a_index < a_max) {
-		a_state[a_index] = fd_uart1.rx_state;
-		a_cycle[a_index] = OCR1B;
-		a_counter[a_index] = tcnt1;
-		a_index ++;
-	}
 
 	switch(fd_uart1.rx_state) {
 		case 0: // Idle
@@ -347,24 +325,8 @@ ISR(TIMER1_COMPB_vect)
 ISR(INT0_vect) {
 	// This will cause a timer interrupt half a bit time later
 	uint8_t tcnt1 = TCNT1;
-	uint8_t ocr1b = OCR1B;
-	OCR1B = (tcnt1 + 110) % 208;
-	count_int0 ++;
-
-	a_index = 0;
-	a_state[a_index] = fd_uart1.rx_state;
-	a_cycle[a_index] = ocr1b;
-	a_counter[a_index] = tcnt1;
-	a_index ++;
+	OCR1B = (tcnt1 + 90) % 208;
 
 	_disable_int0();
-
-#if SERIAL_CYCLES != 1
-	fd_uart1.rx_cycle = SERIAL_CYCLES - 1; // We want to start on next interrupt
-#endif
 	fd_uart1.rx_state = 1;
-}
-
-ISR(TIMER1_OVF_vect) {
-	cycle_count ++;
 }
