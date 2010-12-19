@@ -30,7 +30,7 @@ struct fd_uart {
 	volatile uint8_t recv_bits;
 	volatile uint8_t available;  // 1 = rx data available
 	volatile uint8_t send_ready;  // 1 = can send a byte
-	volatile uint32_t delay;       // No of bit times to delay
+	volatile uint16_t delay;       // No of bit times to delay
 #if SERIAL_CYCLES != 1
 	volatile uint8_t tx_cycle;
 	volatile uint8_t rx_cycle;

@@ -85,6 +85,22 @@ static void _disable_int0(void) {
 	GIMSK &= ~( 1<<INT0 );
 }
 
+inline void _start_tx(void) {
+	TIMSK |= 1<<OCIE1A;
+}
+
+inline void _stop_tx(void) {
+	TIMSK &= ~( 1<<OCIE1A);
+}
+
+inline void _start_rx(void) {
+	TIMSK |= 1<<OCIE1B;
+}
+
+inline void _stop_rx(void) {
+	TIMSK &= ~( 1<<OCIE1B);
+}
+
 /*
 **  Initialise the software UART.
 **
@@ -117,7 +133,7 @@ void fdserial_init(void) {
 	OCR1C = SERIAL_TOP;
 
 	// Interrupt per rx or tx bit
-	TIMSK |= 1<<OCIE1A | 1<<OCIE1B;
+	// TIMSK |= 1<<OCIE1B;
 
 	// Output pin PB3, and raise it
 	DDRB |= 1<<PORTB3;
@@ -163,6 +179,7 @@ void fdserial_send(unsigned char send_arg) {
 	fd_uart1.send_ready = 0;
 	fd_uart1.send_byte = send_arg;
 	fd_uart1.tx_state = 1; // Send start bit
+	_start_tx();
 }
 
 /*
@@ -231,15 +248,6 @@ void fdserial_delay(uint32_t duration) {
 
 ISR(TIMER1_COMPA_vect)
 {
-#if SERIAL_CYCLES != 1
-	if (! --fd_uart1.tx_cycle) {
-		// Ignore this inter-bit interrupt
-		return;
-	}
-
-	// Reset it to the multiple of the bit frequency
-	fd_uart1.tx_cycle = SERIAL_CYCLES;
-#endif
 
 	switch(fd_uart1.tx_state) {
 		case 0: // Idle
@@ -272,6 +280,7 @@ ISR(TIMER1_COMPA_vect)
 		case 4: // Return to idle mode
 			fd_uart1.send_ready = 1;
 			fd_uart1.tx_state = 0;
+			_stop_tx();
 			return;
 		case 5: // Timed delay
 			if (! --fd_uart1.delay) {
@@ -292,12 +301,19 @@ ISR(TIMER1_COMPB_vect)
 
 	switch(fd_uart1.rx_state) {
 		case 0: // Idle
+			if (! read_bit) {
+				// Go straight on to first data bit
+				fd_uart1.rx_state = 2;
+				fd_uart1.recv_bits = 8;
+			}
 			break;
 
 		case 1: // Reading start bit
-			// Go straight on to first data bit
-			fd_uart1.rx_state = 2;
-			fd_uart1.recv_bits = 8;
+			if (! read_bit) {
+				// Go straight on to first data bit
+				fd_uart1.rx_state = 2;
+				fd_uart1.recv_bits = 8;
+			}
 			break;
 
 		case 2: // Reading a data bit
@@ -311,11 +327,14 @@ ISR(TIMER1_COMPB_vect)
 			}
 			break;
 
-		case 3: // Byte done
-			fd_uart1.recv_byte = fd_uart1.recv_shift;
-			fd_uart1.available = 1;
-			fd_uart1.rx_state = 0;
-			_enable_int0();
+		case 3: // Byte done, wait for high
+			if (read_bit) {
+				fd_uart1.recv_byte = fd_uart1.recv_shift;
+				fd_uart1.available = 1;
+				fd_uart1.rx_state = 0;
+//				_stop_rx();
+//				_enable_int0();
+			}
 			break;
 	}
 }
@@ -325,8 +344,15 @@ ISR(TIMER1_COMPB_vect)
 ISR(INT0_vect) {
 	// This will cause a timer interrupt half a bit time later
 	uint8_t tcnt1 = TCNT1;
-	OCR1B = (tcnt1 + 90) % 208;
+	// Calculate (tcnt1 + 93) % 208 (115, 93)
+//	if (tcnt1 >= 28) {
+//		tcnt1 -= 28;
+//	} else {
+//		tcnt1 += 180;
+//	}
+//	OCR1B = tcnt1;
 
 	_disable_int0();
+	_start_rx();
 	fd_uart1.rx_state = 1;
 }
