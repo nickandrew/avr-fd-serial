@@ -91,7 +91,7 @@ int main(void)
 	PORTB |= 1<<PORTB3;
 	// TCCR1 |= 1<<PWM1A;
 	// GTCCR |= 1<<PWM1B;
-	TCCR1 = ctc_mode | com_mode | prescaler;
+	// TCCR1 = ctc_mode | com_mode | prescaler;
 	GIMSK |= 1<<INT0;
 
 	// Enable interrupts
@@ -100,16 +100,19 @@ int main(void)
 	uint32_t loops = 0;
 	uint8_t old_tcnt1 = 0;
 
+	serial0_delay(20000);
 	writeString("Starting\n");
+	serial0_delay(20000);
 	writeString("Really starting\n");
+	serial0_delay(20000);
 
-//	while (1) {
-//		serial0_send('<');
-//		serial0_send('<');
-//		serial0_send('<');
-//		serial0_delay(1000);
-//		serial0_send('>');
-//	}
+	while (1) {
+		serial0_send('<');
+		serial0_send('<');
+		serial0_send('<');
+		serial0_delay(20000);
+		serial0_send('>');
+	}
 
 	while (1) {
 		loops ++;
