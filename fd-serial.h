@@ -12,7 +12,7 @@
 // This says how many interrupts will occur per bit duration.
 // Set to 1 ==> When start bit is detected, set OCR1B halfway around the cycle
 // Set to 4 ==> Do 3 times oversampling of each bit
-#define SERIAL_CYCLES 1
+#define SERIAL_CYCLES 4
 #endif
 
 #ifndef SERIAL_RATE

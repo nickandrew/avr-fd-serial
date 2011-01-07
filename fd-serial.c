@@ -27,8 +27,8 @@ extern volatile uint8_t a_max;
 
 #include "fd-serial.h"
 
-#if SERIAL_CYCLES != 1
-#error "SERIAL_CYCLES only works with 1 at present"
+#if SERIAL_CYCLES != 1 && SERIAL_CYCLES != 4
+#error "SERIAL_CYCLES only works with 1 and 4 at present"
 #endif
 
 #ifndef CPU_FREQ
@@ -40,7 +40,13 @@ extern volatile uint8_t a_max;
 #define PRESCALER (1<<CS11 | 1<<CS10)
 #define PRESCALER_DIVISOR 4
 // 8000000 / PRESCALER / 9600 = 208.333
+
+#if SERIAL_CYCLES == 1
 #define SERIAL_TOP 207
+#elif SERIAL_CYCLES == 4
+#define SERIAL_TOP 51
+#endif
+
 #else
 #error "Serial rates other than 9600 are not presently supported"
 #endif
@@ -128,8 +134,8 @@ void fdserial_init(void) {
 	MCUCR |= 1<<ISC01;
 
 	TCNT1 = 0;
-	OCR1A = 0; // this will be used for send bit timing
-	OCR1B = 0; // this will be used for receive bit timing
+	OCR1A = 16; // this will be used for send bit timing
+	OCR1B = 32; // this will be used for receive bit timing
 	OCR1C = SERIAL_TOP;
 
 	// Interrupt per rx or tx bit
@@ -249,6 +255,14 @@ void fdserial_delay(uint32_t duration) {
 ISR(TIMER1_COMPA_vect)
 {
 
+#if SERIAL_CYCLES != 1
+	if (--fd_uart1.tx_cycle) {
+		return;
+	}
+
+	fd_uart1.tx_cycle = SERIAL_CYCLES;
+#endif
+
 	switch(fd_uart1.tx_state) {
 		case 0: // Idle
 			return;
@@ -295,9 +309,18 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(TIMER1_COMPB_vect)
 {
+
 	// Read the bit as early as possible, to try to hit the
 	// center mark
 	uint8_t read_bit = PINB & (1<<PORTB2);
+
+#if SERIAL_CYCLES != 1
+	if (--fd_uart1.rx_cycle) {
+		return;
+	}
+
+	fd_uart1.rx_cycle = SERIAL_CYCLES;
+#endif
 
 	switch(fd_uart1.rx_state) {
 		case 0: // Idle
@@ -305,6 +328,9 @@ ISR(TIMER1_COMPB_vect)
 				// Go straight on to first data bit
 				fd_uart1.rx_state = 2;
 				fd_uart1.recv_bits = 8;
+#if SERIAL_CYCLES != 1
+				fd_uart1.rx_cycle = 2;
+#endif
 			}
 			break;
 
@@ -342,17 +368,12 @@ ISR(TIMER1_COMPB_vect)
 // This is called on the falling edge of INT0 (pin 7)
 
 ISR(INT0_vect) {
+
+#if SERIAL_CYCLES != 1
 	// This will cause a timer interrupt half a bit time later
-	uint8_t tcnt1 = TCNT1;
-	// Calculate (tcnt1 + 93) % 208 (115, 93)
-//	if (tcnt1 >= 28) {
-//		tcnt1 -= 28;
-//	} else {
-//		tcnt1 += 180;
-//	}
-//	OCR1B = tcnt1;
+	fd_uart1.tx_cycle = 2;
+#endif
 
 	_disable_int0();
 	_start_rx();
-	fd_uart1.rx_state = 1;
 }
