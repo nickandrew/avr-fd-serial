@@ -313,6 +313,7 @@ ISR(TIMER1_COMPB_vect)
 
 	// Read the bit as early as possible, to try to hit the
 	// center mark
+	PORTB |= 1<<PORTB4;
 	uint8_t read_bit = PINB & (1<<PORTB2);
 
 #if SERIAL_CYCLES != 1
@@ -358,32 +359,32 @@ ISR(TIMER1_COMPB_vect)
 				fd_uart1.available = 1;
 				fd_uart1.rx_state = 0;
 				_stop_rx();
-				_enable_int0();
+				// _enable_int0();
 			}
 			break;
 	}
+	PORTB &= ~(1<<PORTB4);
 }
 
 // This is called on the falling edge of INT0 (pin 7)
 
 ISR(INT0_vect) {
+	uint8_t tcnt1 = TCNT1;
 
 #if SERIAL_CYCLES != 1
 	// This will cause a timer interrupt half a bit time later
 	fd_uart1.tx_cycle = 2;
-#else
-	OCR1B = TCNT1 + SERIAL_HALFBIT;
 #endif
-	uint8_t read_bit = PINB & (1<<PORTB2);
 
 	PORTB |= 1<<PORTB4;
-	// Only start RX if bit is low. This prevents an
+	// Only start RX if currently idle. This prevents an
 	// "extra" INT0 interrupt at the end of a byte from restarting the receive state machine.
-	if (! read_bit) {
+	if (fd_uart1.rx_state == 0) {
+		// Set next bit time
+		OCR1B = tcnt1 + SERIAL_HALFBIT;
 		// disable int0
 		// GIMSK &= ~( 1<<INT0 );
 		// start rx
 		TIMSK |= 1<<OCIE1B;
 	}
-	PORTB &= ~(1<<PORTB4);
 }
