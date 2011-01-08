@@ -202,7 +202,6 @@ void fdserial_send(unsigned char send_arg) {
 unsigned char fdserial_recv() {
 	// Wait until available
 	while (! fd_uart1.available) { }
-	PORTB &= ~(1<<PORTB4);
 
 	unsigned char c = fd_uart1.recv_byte;
 	fd_uart1.recv_byte = 0;  // Reading nulls means you are probably doing something wrong
@@ -375,10 +374,16 @@ ISR(INT0_vect) {
 #else
 	OCR1B = TCNT1 + SERIAL_HALFBIT;
 #endif
+	uint8_t read_bit = PINB & (1<<PORTB2);
 
 	PORTB |= 1<<PORTB4;
-	// disable int0
-	GIMSK &= ~( 1<<INT0 );
-	// start rx
-	TIMSK |= 1<<OCIE1B;
+	// Only start RX if bit is low. This prevents an
+	// "extra" INT0 interrupt at the end of a byte from restarting the receive state machine.
+	if (! read_bit) {
+		// disable int0
+		// GIMSK &= ~( 1<<INT0 );
+		// start rx
+		TIMSK |= 1<<OCIE1B;
+	}
+	PORTB &= ~(1<<PORTB4);
 }
