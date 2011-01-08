@@ -43,6 +43,7 @@ extern volatile uint8_t a_max;
 
 #if SERIAL_CYCLES == 1
 #define SERIAL_TOP 207
+#define SERIAL_HALFBIT 104
 #elif SERIAL_CYCLES == 4
 #define SERIAL_TOP 51
 #endif
@@ -201,6 +202,7 @@ void fdserial_send(unsigned char send_arg) {
 unsigned char fdserial_recv() {
 	// Wait until available
 	while (! fd_uart1.available) { }
+	PORTB &= ~(1<<PORTB4);
 
 	unsigned char c = fd_uart1.recv_byte;
 	fd_uart1.recv_byte = 0;  // Reading nulls means you are probably doing something wrong
@@ -335,11 +337,9 @@ ISR(TIMER1_COMPB_vect)
 			break;
 
 		case 1: // Reading start bit
-			if (! read_bit) {
-				// Go straight on to first data bit
-				fd_uart1.rx_state = 2;
-				fd_uart1.recv_bits = 8;
-			}
+			// Go straight on to first data bit
+			fd_uart1.rx_state = 2;
+			fd_uart1.recv_bits = 8;
 			break;
 
 		case 2: // Reading a data bit
@@ -358,8 +358,8 @@ ISR(TIMER1_COMPB_vect)
 				fd_uart1.recv_byte = fd_uart1.recv_shift;
 				fd_uart1.available = 1;
 				fd_uart1.rx_state = 0;
-//				_stop_rx();
-//				_enable_int0();
+				_stop_rx();
+				_enable_int0();
 			}
 			break;
 	}
@@ -372,8 +372,13 @@ ISR(INT0_vect) {
 #if SERIAL_CYCLES != 1
 	// This will cause a timer interrupt half a bit time later
 	fd_uart1.tx_cycle = 2;
+#else
+	OCR1B = TCNT1 + SERIAL_HALFBIT;
 #endif
 
-	_disable_int0();
-	_start_rx();
+	PORTB |= 1<<PORTB4;
+	// disable int0
+	GIMSK &= ~( 1<<INT0 );
+	// start rx
+	TIMSK |= 1<<OCIE1B;
 }
