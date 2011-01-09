@@ -334,14 +334,12 @@ ISR(TIMER1_COMPB_vect)
 
 	switch(fd_uart1.rx_state) {
 		case 0: // Idle
-			// if (! read_bit) {
-				// Read close to start of start bit
-				fd_uart1.rx_state = 1;
-				fd_uart1.recv_bits = 8;
+			// Midpoint of start bit. Go on to first data bit.
+			fd_uart1.rx_state = 2;
+			fd_uart1.recv_bits = 8;
 #if SERIAL_CYCLES != 1
-				fd_uart1.rx_cycle = 2;
+			fd_uart1.rx_cycle = 2;
 #endif
-			// }
 			break;
 
 		case 1: // Reading start bit
@@ -402,6 +400,8 @@ ISR(INT0_vect) {
 		}
 		// disable int0
 		GIMSK &= ~( 1<<INT0 );
+		// Clear pending RX timer interrupt
+		TIFR |= 1<<OCF1B;
 		// start rx
 		TIMSK |= 1<<OCIE1B;
 	}
