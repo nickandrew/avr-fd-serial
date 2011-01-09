@@ -368,6 +368,8 @@ ISR(TIMER1_COMPB_vect)
 				fd_uart1.rx_state = 0;
 				_stop_rx();
 				_enable_int0();
+				// Clear any pending INT0
+				GIFR |= 1<<INTF0;
 			}
 			break;
 	}
