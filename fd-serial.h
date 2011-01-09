@@ -16,14 +16,14 @@
 struct fd_uart {
 	volatile uint8_t tx_state;
 	volatile uint8_t rx_state;
-	volatile unsigned char send_byte;
+	volatile unsigned char send_byte;  // byte presently being sent (shifted)
 	volatile unsigned char recv_byte;  // buffered received byte
 	volatile unsigned char recv_shift; // rx data shifted into this byte
-	volatile uint8_t send_bits;
-	volatile uint8_t recv_bits;
-	volatile uint8_t available;  // 1 = rx data available
-	volatile uint8_t send_ready;  // 1 = can send a byte
-	volatile uint16_t delay;       // No of bit times to delay
+	volatile uint8_t send_bits;        // Number of bits remaining to send
+	volatile uint8_t recv_bits;        // Number of bits remaining to receive
+	volatile uint8_t available;        // 1 = rx data available
+	volatile uint8_t send_ready;       // 1 = can send a byte
+	volatile uint16_t delay;           // Number of bit times to delay
 };
 
 // Initialise data structures, timer, interrupts and output pin
@@ -33,6 +33,8 @@ void fdserial_init(void);
 // Return true when rx data is available to read
 
 uint8_t fdserial_available(void);
+
+// Return true when the tx sender is idle
 
 uint8_t fdserial_sendok(void);
 
