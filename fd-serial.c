@@ -345,30 +345,22 @@ ISR(TIMER1_COMPB_vect)
 }
 
 // This is called on the falling edge of INT0 (pin 7).
-// It will also be called at the end of a received byte (when interrupts
-// are re-enabled) if the byte contained any zero-bits.
+// It is the beginning of a start bit.
 
 ISR(INT0_vect) {
 	uint8_t tcnt1 = TCNT1;
 
-	uint8_t read_bit = PINB & (1<<PORTB2);
-
-	// Only start RX if we are reading a start bit.
-	// This prevents an "extra" INT0 interrupt at the end of a byte
-	// from restarting the receive state machine.
-	if (! read_bit) {
-		// Set sample time, half a bit after now.
-		if (tcnt1 > 103) {
-			OCR1B = tcnt1 - 103;
-		} else {
-			OCR1B = tcnt1 + SERIAL_HALFBIT;
-		}
-		// disable int0
-		GIMSK &= ~( 1<<INT0 );
-		// Clear pending RX timer interrupt
-		TIFR |= 1<<OCF1B;
-		// start rx
-		TIMSK |= 1<<OCIE1B;
+	// Set sample time, half a bit after now.
+	if (tcnt1 >= SERIAL_HALFBIT) {
+		OCR1B = tcnt1 - SERIAL_HALFBIT;
+	} else {
+		OCR1B = tcnt1 + SERIAL_HALFBIT;
 	}
 
+	// disable INT0
+	GIMSK &= ~( 1<<INT0 );
+	// Clear pending RX timer interrupt
+	TIFR |= 1<<OCF1B;
+	// start rx
+	TIMSK |= 1<<OCIE1B;
 }
