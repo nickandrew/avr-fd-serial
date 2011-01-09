@@ -27,10 +27,6 @@ extern volatile uint8_t a_max;
 
 #include "fd-serial.h"
 
-#if SERIAL_CYCLES != 1 && SERIAL_CYCLES != 4
-#error "SERIAL_CYCLES only works with 1 and 4 at present"
-#endif
-
 #ifndef CPU_FREQ
 #define CPU_FREQ 8000000
 #endif
@@ -41,12 +37,8 @@ extern volatile uint8_t a_max;
 #define PRESCALER_DIVISOR 4
 // 8000000 / PRESCALER / 9600 = 208.333
 
-#if SERIAL_CYCLES == 1
 #define SERIAL_TOP 207
 #define SERIAL_HALFBIT 104
-#elif SERIAL_CYCLES == 4
-#define SERIAL_TOP 51
-#endif
 
 #else
 #error "Serial rates other than 9600 are not presently supported"
@@ -184,9 +176,6 @@ void fdserial_send(unsigned char send_arg) {
 	while (! fd_uart1.send_ready) { }
 
 	OCR1A = TCNT1;
-#if SERIAL_CYCLES != 1
-	fd_uart1.tx_cycle = SERIAL_CYCLES;
-#endif
 	fd_uart1.send_ready = 0;
 	fd_uart1.send_byte = send_arg;
 	fd_uart1.tx_state = 1; // Send start bit
@@ -259,15 +248,6 @@ void fdserial_delay(uint32_t duration) {
 
 ISR(TIMER1_COMPA_vect)
 {
-
-#if SERIAL_CYCLES != 1
-	if (--fd_uart1.tx_cycle) {
-		return;
-	}
-
-	fd_uart1.tx_cycle = SERIAL_CYCLES;
-#endif
-
 	// Toggle bits in PORTB to update them to the current rx_state
 	uint8_t x = (PORTB & 0x03) ^ fd_uart1.rx_state;
 	PORTB ^= x;
@@ -325,22 +305,11 @@ ISR(TIMER1_COMPB_vect)
 	// center mark
 	uint8_t read_bit = PINB & (1<<PORTB2);
 
-#if SERIAL_CYCLES != 1
-	if (--fd_uart1.rx_cycle) {
-		return;
-	}
-
-	fd_uart1.rx_cycle = SERIAL_CYCLES;
-#endif
-
 	switch(fd_uart1.rx_state) {
 		case 0: // Idle
 			// Midpoint of start bit. Go on to first data bit.
 			fd_uart1.rx_state = 2;
 			fd_uart1.recv_bits = 8;
-#if SERIAL_CYCLES != 1
-			fd_uart1.rx_cycle = 2;
-#endif
 			break;
 
 		case 1: // Reading start bit
@@ -381,11 +350,6 @@ ISR(TIMER1_COMPB_vect)
 
 ISR(INT0_vect) {
 	uint8_t tcnt1 = TCNT1;
-
-#if SERIAL_CYCLES != 1
-	// This will cause a timer interrupt half a bit time later
-	fd_uart1.tx_cycle = 2;
-#endif
 
 	uint8_t read_bit = PINB & (1<<PORTB2);
 

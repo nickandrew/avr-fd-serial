@@ -8,13 +8,6 @@
 
 #include <stdint.h>
 
-#ifndef SERIAL_CYCLES
-// This says how many interrupts will occur per bit duration.
-// Set to 1 ==> When start bit is detected, set OCR1B halfway around the cycle
-// Set to 4 ==> Do 3 times oversampling of each bit
-#define SERIAL_CYCLES 1
-#endif
-
 #ifndef SERIAL_RATE
 // Support for different bitrates is not presently implemented
 #define SERIAL_RATE 9600
@@ -31,10 +24,6 @@ struct fd_uart {
 	volatile uint8_t available;  // 1 = rx data available
 	volatile uint8_t send_ready;  // 1 = can send a byte
 	volatile uint16_t delay;       // No of bit times to delay
-#if SERIAL_CYCLES != 1
-	volatile uint8_t tx_cycle;
-	volatile uint8_t rx_cycle;
-#endif
 };
 
 // Initialise data structures, timer, interrupts and output pin
