@@ -413,6 +413,7 @@ test-serial0.elf:	test-serial0.o
 	$(SIZE) -AC --mcu=$(MCU) $@
 
 example-recv.elf:	example-recv.o libfdserial.a
+example-ring.elf:	example-ring.o libfdserial.a
 
 main.elf:		main.o ir-sender.o
 
