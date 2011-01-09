@@ -153,6 +153,7 @@ void fdserial_init(void) {
 	TCCR1 = ctc_mode | com_mode;
 	_starttimer();
 	_enable_int0();
+	_start_tx();
 }
 
 /*
@@ -267,8 +268,13 @@ ISR(TIMER1_COMPA_vect)
 	fd_uart1.tx_cycle = SERIAL_CYCLES;
 #endif
 
+	// Toggle bits in PORTB to update them to the current rx_state
+	uint8_t x = (PORTB & 0x03) ^ fd_uart1.rx_state;
+	PORTB ^= x;
+
 	switch(fd_uart1.tx_state) {
 		case 0: // Idle
+			// Show the rx_state (0..3) on PORTB0 and PORTB1
 			return;
 
 		case 1: // Send start bit
@@ -298,7 +304,7 @@ ISR(TIMER1_COMPA_vect)
 		case 4: // Return to idle mode
 			fd_uart1.send_ready = 1;
 			fd_uart1.tx_state = 0;
-			_stop_tx();
+			// _stop_tx();
 			return;
 		case 5: // Timed delay
 			if (! --fd_uart1.delay) {
@@ -330,7 +336,7 @@ ISR(TIMER1_COMPB_vect)
 	switch(fd_uart1.rx_state) {
 		case 0: // Idle
 			// if (! read_bit) {
-				// Read middle of start bit
+				// Read close to start of start bit
 				fd_uart1.rx_state = 1;
 				fd_uart1.recv_bits = 8;
 #if SERIAL_CYCLES != 1
@@ -373,7 +379,6 @@ ISR(TIMER1_COMPB_vect)
 
 ISR(INT0_vect) {
 	uint8_t tcnt1 = TCNT1;
-	PORTB |= 1<<PORTB0;
 
 #if SERIAL_CYCLES != 1
 	// This will cause a timer interrupt half a bit time later
@@ -384,13 +389,16 @@ ISR(INT0_vect) {
 	// Only start RX if currently idle. This prevents an
 	// "extra" INT0 interrupt at the end of a byte from restarting the receive state machine.
 	if (fd_uart1.rx_state == 0) {
-		// Set next bit time
-		OCR1B = tcnt1 + SERIAL_HALFBIT;
+		// Set sample time, half a bit after now.
+		if (tcnt1 > 103) {
+			OCR1B = tcnt1 - 103;
+		} else {
+			OCR1B = tcnt1 + SERIAL_HALFBIT;
+		}
 		// disable int0
 		// GIMSK &= ~( 1<<INT0 );
 		// start rx
 		TIMSK |= 1<<OCIE1B;
 	}
 
-	PORTB &= ~(1<<PORTB0);
 }
