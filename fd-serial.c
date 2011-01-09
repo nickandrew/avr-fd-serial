@@ -13,18 +13,6 @@
 #include <avr/interrupt.h>
 #include <stdint.h>
 
-extern volatile uint8_t count_int0;
-extern volatile uint8_t start_cycles;
-extern volatile uint8_t start_counter;
-extern volatile uint8_t stop_cycles;
-extern volatile uint8_t stop_counter;
-extern volatile uint8_t cycle_count;
-extern volatile uint8_t a_state[];
-extern volatile uint8_t a_cycle[];
-extern volatile uint8_t a_counter[];
-extern volatile uint8_t a_index;
-extern volatile uint8_t a_max;
-
 #include "fd-serial.h"
 
 #ifndef CPU_FREQ
