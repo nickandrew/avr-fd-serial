@@ -73,6 +73,9 @@ static void _stoptimer(void) {
 */
 
 inline void _enable_int0(void) {
+	// Clear any pending INT0
+	GIFR |= 1<<INTF0;
+	// Enable INT0
 	GIMSK |= 1<<INT0;
 }
 
@@ -340,8 +343,6 @@ ISR(TIMER1_COMPB_vect)
 				fd_uart1.rx_state = 0;
 				_stop_rx();
 				_enable_int0();
-				// Clear any pending INT0
-				GIFR |= 1<<INTF0;
 			}
 			break;
 	}
