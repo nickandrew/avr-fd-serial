@@ -367,13 +367,15 @@ ISR(TIMER1_COMPB_vect)
 				fd_uart1.available = 1;
 				fd_uart1.rx_state = 0;
 				_stop_rx();
-				// _enable_int0();
+				_enable_int0();
 			}
 			break;
 	}
 }
 
-// This is called on the falling edge of INT0 (pin 7)
+// This is called on the falling edge of INT0 (pin 7).
+// It will also be called at the end of a received byte (when interrupts
+// are re-enabled) if the byte contained any zero-bits.
 
 ISR(INT0_vect) {
 	uint8_t tcnt1 = TCNT1;
@@ -384,9 +386,12 @@ ISR(INT0_vect) {
 #endif
 
 	PORTB |= 1<<PORTB4;
-	// Only start RX if currently idle. This prevents an
-	// "extra" INT0 interrupt at the end of a byte from restarting the receive state machine.
-	if (fd_uart1.rx_state == 0) {
+	uint8_t read_bit = PINB & (1<<PORTB2);
+
+	// Only start RX if we are reading a start bit.
+	// This prevents an "extra" INT0 interrupt at the end of a byte
+	// from restarting the receive state machine.
+	if (! read_bit) {
 		// Set sample time, half a bit after now.
 		if (tcnt1 > 103) {
 			OCR1B = tcnt1 - 103;
@@ -394,7 +399,7 @@ ISR(INT0_vect) {
 			OCR1B = tcnt1 + SERIAL_HALFBIT;
 		}
 		// disable int0
-		// GIMSK &= ~( 1<<INT0 );
+		GIMSK &= ~( 1<<INT0 );
 		// start rx
 		TIMSK |= 1<<OCIE1B;
 	}
