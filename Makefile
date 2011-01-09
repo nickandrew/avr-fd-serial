@@ -11,6 +11,11 @@
 # make filename.s = Just compile filename.c into the assembler code only
 # To rebuild project do "make clean" then "make all".
 
+safe:
+	@make libfdserial.a
+	@rm -f serial-example.elf
+	@make serial-example.hex
+
 # Microcontroller Type
 # MCU = attiny13
 # MCU = attiny2313
@@ -393,11 +398,25 @@ clean_list :
 	clean clean_list program
 
 
-serial-example.elf:	serial-example.o
-main.elf:		main.o ir-sender.o
-
 LDFLAGS += -L. -lfdserial
 
+serial-example.elf:	serial-example.o
+	$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS) -L. -lfdserial
+	$(SIZE) -AC --mcu=$(MCU) $@
+
+example-send.elf:	example-send.o
+	$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS) -L. -lfdserial
+	$(SIZE) -AC --mcu=$(MCU) $@
+
+test-serial0.elf:	test-serial0.o
+	$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS) -L. -lserial0
+	$(SIZE) -AC --mcu=$(MCU) $@
+
+example-recv.elf:	example-recv.o libfdserial.a
+
+main.elf:		main.o ir-sender.o
+
 libfdserial.a:		fd-serial.o
+libserial0.a:		serial0.o
 
 binaries:	serial-example.hex main.hex
