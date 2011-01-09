@@ -69,18 +69,18 @@ static void _stoptimer(void) {
 }
 
 /*
-**  Enable PCINT0
+**  Enable INT0
 */
 
-static void _enable_int0(void) {
+inline void _enable_int0(void) {
 	GIMSK |= 1<<INT0;
 }
 
 /*
-**  Disable PCINT0
+**  Disable INT0
 */
 
-static void _disable_int0(void) {
+inline void _disable_int0(void) {
 	GIMSK &= ~( 1<<INT0 );
 }
 
@@ -89,15 +89,19 @@ inline void _start_tx(void) {
 }
 
 inline void _stop_tx(void) {
-	TIMSK &= ~( 1<<OCIE1A);
+	// Enable TIMER_COMP1A
+	TIMSK &= ~( 1<<OCIE1A );
 }
 
 inline void _start_rx(void) {
+	// Clear pending RX timer interrupt
+	TIFR |= 1<<OCF1B;
+	// Enable TIMER_COMP1B
 	TIMSK |= 1<<OCIE1B;
 }
 
 inline void _stop_rx(void) {
-	TIMSK &= ~( 1<<OCIE1B);
+	TIMSK &= ~( 1<<OCIE1B );
 }
 
 /*
@@ -357,10 +361,6 @@ ISR(INT0_vect) {
 		OCR1B = tcnt1 + SERIAL_HALFBIT;
 	}
 
-	// disable INT0
-	GIMSK &= ~( 1<<INT0 );
-	// Clear pending RX timer interrupt
-	TIFR |= 1<<OCF1B;
-	// start rx
-	TIMSK |= 1<<OCIE1B;
+	_disable_int0();
+	_start_rx();
 }
