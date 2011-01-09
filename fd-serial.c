@@ -319,6 +319,7 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(TIMER1_COMPB_vect)
 {
+	PORTB |= 1<<PORTB4;
 
 	// Read the bit as early as possible, to try to hit the
 	// center mark
@@ -371,6 +372,7 @@ ISR(TIMER1_COMPB_vect)
 			}
 			break;
 	}
+	PORTB &= ~(1<<PORTB4);
 }
 
 // This is called on the falling edge of INT0 (pin 7).
@@ -385,7 +387,6 @@ ISR(INT0_vect) {
 	fd_uart1.tx_cycle = 2;
 #endif
 
-	PORTB |= 1<<PORTB4;
 	uint8_t read_bit = PINB & (1<<PORTB2);
 
 	// Only start RX if we are reading a start bit.
@@ -406,5 +407,4 @@ ISR(INT0_vect) {
 		TIMSK |= 1<<OCIE1B;
 	}
 
-	PORTB &= ~(1<<PORTB4);
 }
