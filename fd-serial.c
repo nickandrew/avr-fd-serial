@@ -4,8 +4,8 @@
 **
 **  ATtiny85
 **     This code uses Timer/Counter 1
-**     RX connected to PB2 (INT0), pin 7
-**     TX connected to PB3, pin 2
+**     RX is connected to PORTB2 (INT0), pin 7
+**     TX is connected to PORTB3, pin 2
 **     Speed 9600 bps, full duplex
 */
 
@@ -24,7 +24,6 @@
 #define PRESCALER (1<<CS11 | 1<<CS10)
 #define PRESCALER_DIVISOR 4
 // 8000000 / PRESCALER / 9600 = 208.333
-
 #define SERIAL_TOP 207
 #define SERIAL_HALFBIT 104
 
@@ -75,14 +74,26 @@ inline void _disable_int0(void) {
 	GIMSK &= ~( 1<<INT0 );
 }
 
+/*
+**  Enable TIMER1_COMPA - TX bit timer
+*/
+
 inline void _start_tx(void) {
 	TIMSK |= 1<<OCIE1A;
 }
+
+/*
+**  Disable TIMER1_COMPA
+*/
 
 inline void _stop_tx(void) {
 	// Enable TIMER_COMP1A
 	TIMSK &= ~( 1<<OCIE1A );
 }
+
+/*
+**  Enable TIMER1_COMPB - RX bit timer
+*/
 
 inline void _start_rx(void) {
 	// Clear pending RX timer interrupt
@@ -90,6 +101,10 @@ inline void _start_rx(void) {
 	// Enable TIMER_COMP1B
 	TIMSK |= 1<<OCIE1B;
 }
+
+/*
+**  Disable TIMER1_COMPB
+*/
 
 inline void _stop_rx(void) {
 	TIMSK &= ~( 1<<OCIE1B );
@@ -104,8 +119,8 @@ inline void _stop_rx(void) {
 **    No output pin
 **    Frequency = 8000000 / 4 / 208 = 9615 bits/sec
 **    Prescaler = 4, Clock source = System clock, OCR1C = 207
-**  Configure PCINT0 so an interrupt occurs on the falling edge
-**    of PCINT0 (pin 7)
+**  Configure INT0 so an interrupt occurs on the falling edge
+**    of INT0 (pin 7)
 */
 
 void fdserial_init(void) {
@@ -118,7 +133,7 @@ void fdserial_init(void) {
 	fd_uart1.available = 0;
 	fd_uart1.rx_state = 0;
 
-	// Configure PCINT0 to interrupt on falling edge
+	// Configure INT0 to interrupt on falling edge
 	MCUCR |= 1<<ISC01;
 
 	TCNT1 = 0;
@@ -126,13 +141,10 @@ void fdserial_init(void) {
 	OCR1B = 32; // this will be used for receive bit timing
 	OCR1C = SERIAL_TOP;
 
-	// Interrupt per rx or tx bit
-	// TIMSK |= 1<<OCIE1B;
-
 	// Debugging output pins
 	DDRB |= 1<<PORTB4 | 1<<PORTB1 | 1<<PORTB0;
 
-	// Output pin PB3, and raise it
+	// Configure pin PORTB3 as an output, and raise it
 	DDRB |= 1<<PORTB3;
 	PORTB |= 1<<PORTB3;
 
@@ -154,7 +166,7 @@ uint8_t fdserial_available(void) {
 
 /*
 **  fdserial_sendok()
-**    Return true if the transmit interface is free to transmit a character
+**    Return true if the transmit interface is free to transmit a character.
 */
 
 uint8_t fdserial_sendok(void) {
@@ -163,7 +175,7 @@ uint8_t fdserial_sendok(void) {
 
 /*
 **  fdserial_send(c)
-**    Send the character c
+**    Send the character c.
 */
 
 void fdserial_send(unsigned char send_arg) {
@@ -238,8 +250,9 @@ void fdserial_delay(uint32_t duration) {
 	while (! fd_uart1.send_ready) { }
 }
 
-
-// Interrupt routine for timer1, TCCR1A, tx bits
+/*
+** Interrupt handler for timer1, TCCR1A, tx bits
+*/
 
 ISR(TIMER1_COMPA_vect)
 {
@@ -249,7 +262,6 @@ ISR(TIMER1_COMPA_vect)
 
 	switch(fd_uart1.tx_state) {
 		case 0: // Idle
-			// Show the rx_state (0..3) on PORTB0 and PORTB1
 			return;
 
 		case 1: // Send start bit
@@ -290,7 +302,9 @@ ISR(TIMER1_COMPA_vect)
 	}
 }
 
-// Interrupt routine for timer1, TCCR1A, rx bits
+/*
+** Interrupt handler for timer1, TCCR1B, rx bits
+*/
 
 ISR(TIMER1_COMPB_vect)
 {
@@ -301,8 +315,7 @@ ISR(TIMER1_COMPB_vect)
 	uint8_t read_bit = PINB & (1<<PORTB2);
 
 	switch(fd_uart1.rx_state) {
-		case 0: // Idle
-			// Midpoint of start bit. Go on to first data bit.
+		case 0: // Midpoint of start bit. Go on to first data bit.
 			fd_uart1.rx_state = 2;
 			fd_uart1.recv_bits = 8;
 			break;
@@ -337,8 +350,10 @@ ISR(TIMER1_COMPB_vect)
 	PORTB &= ~(1<<PORTB4);
 }
 
-// This is called on the falling edge of INT0 (pin 7).
-// It is the beginning of a start bit.
+/*
+** This is called on the falling edge of INT0 (pin 7).
+** It is the beginning of a start bit.
+*/
 
 ISR(INT0_vect) {
 	uint8_t tcnt1 = TCNT1;
