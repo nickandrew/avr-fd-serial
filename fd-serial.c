@@ -322,7 +322,6 @@ ISR(TIMER1_COMPB_vect)
 
 	// Read the bit as early as possible, to try to hit the
 	// center mark
-	PORTB |= 1<<PORTB4;
 	uint8_t read_bit = PINB & (1<<PORTB2);
 
 #if SERIAL_CYCLES != 1
@@ -372,7 +371,6 @@ ISR(TIMER1_COMPB_vect)
 			}
 			break;
 	}
-	PORTB &= ~(1<<PORTB4);
 }
 
 // This is called on the falling edge of INT0 (pin 7)
@@ -401,4 +399,5 @@ ISR(INT0_vect) {
 		TIMSK |= 1<<OCIE1B;
 	}
 
+	PORTB &= ~(1<<PORTB4);
 }
