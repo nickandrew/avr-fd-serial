@@ -141,9 +141,6 @@ void fdserial_init(void) {
 	OCR1B = 32; // this will be used for receive bit timing
 	OCR1C = SERIAL_TOP;
 
-	// Debugging output pins
-	DDRB |= 1<<PORTB4 | 1<<PORTB1 | 1<<PORTB0;
-
 	// Configure pin PORTB3 as an output, and raise it
 	DDRB |= 1<<PORTB3;
 	PORTB |= 1<<PORTB3;
@@ -303,8 +300,6 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(TIMER1_COMPB_vect)
 {
-	PORTB |= 1<<PORTB4;
-
 	// Read the bit as early as possible, to try to hit the
 	// center mark
 	uint8_t read_bit = PINB & (1<<PORTB2);
@@ -342,7 +337,6 @@ ISR(TIMER1_COMPB_vect)
 			}
 			break;
 	}
-	PORTB &= ~(1<<PORTB4);
 }
 
 /*
