@@ -142,6 +142,9 @@ void fdserial_init(void) {
 	// Interrupt per rx or tx bit
 	// TIMSK |= 1<<OCIE1B;
 
+	// Debugging output pins
+	DDRB |= 1<<PORTB4 | 1<<PORTB1 | 1<<PORTB0;
+
 	// Output pin PB3, and raise it
 	DDRB |= 1<<PORTB3;
 	PORTB |= 1<<PORTB3;
@@ -326,14 +329,14 @@ ISR(TIMER1_COMPB_vect)
 
 	switch(fd_uart1.rx_state) {
 		case 0: // Idle
-			if (! read_bit) {
-				// Go straight on to first data bit
-				fd_uart1.rx_state = 2;
+			// if (! read_bit) {
+				// Read middle of start bit
+				fd_uart1.rx_state = 1;
 				fd_uart1.recv_bits = 8;
 #if SERIAL_CYCLES != 1
 				fd_uart1.rx_cycle = 2;
 #endif
-			}
+			// }
 			break;
 
 		case 1: // Reading start bit
@@ -370,6 +373,7 @@ ISR(TIMER1_COMPB_vect)
 
 ISR(INT0_vect) {
 	uint8_t tcnt1 = TCNT1;
+	PORTB |= 1<<PORTB0;
 
 #if SERIAL_CYCLES != 1
 	// This will cause a timer interrupt half a bit time later
@@ -387,4 +391,6 @@ ISR(INT0_vect) {
 		// start rx
 		TIMSK |= 1<<OCIE1B;
 	}
+
+	PORTB &= ~(1<<PORTB0);
 }
