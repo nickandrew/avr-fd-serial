@@ -8,6 +8,10 @@
 
 #include <stdint.h>
 
+// Size of rx buffer. Up to one less characters can be
+// received in the background and not yet read by the caller.
+#define RING_BUFFER 20
+
 #ifndef SERIAL_RATE
 // Support for different bitrates is not presently implemented
 #define SERIAL_RATE 9600
@@ -24,13 +28,18 @@ struct fd_uart {
 	volatile uint8_t available;        // 1 = rx data available
 	volatile uint8_t send_ready;       // 1 = can send a byte
 	volatile uint16_t delay;           // Number of bit times to delay
+#ifdef RING_BUFFER
+	volatile unsigned char rx_buf[RING_BUFFER];
+	volatile uint8_t rx_head;          // Index of next char to append
+	volatile uint8_t rx_tail;          // Index of next char to remove
+#endif
 };
 
 // Initialise data structures, timer, interrupts and output pin
 
 void fdserial_init(void);
 
-// Return true when rx data is available to read
+// Return count of bytes available to read
 
 uint8_t fdserial_available(void);
 

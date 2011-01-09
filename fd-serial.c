@@ -133,6 +133,11 @@ void fdserial_init(void) {
 	fd_uart1.available = 0;
 	fd_uart1.rx_state = 0;
 
+#ifdef RING_BUFFER
+	fd_uart1.rx_head = 0;
+	fd_uart1.rx_tail = 0;
+#endif
+
 	// Configure INT0 to interrupt on falling edge
 	MCUCR |= 1<<ISC01;
 
@@ -157,7 +162,16 @@ void fdserial_init(void) {
 */
 
 uint8_t fdserial_available(void) {
+#ifdef RING_BUFFER
+	char d = fd_uart1.rx_head - fd_uart1.rx_tail;
+	if (d < 0) {
+		return d + RING_BUFFER;
+	}
+
+	return d;
+#else
 	return fd_uart1.available;
+#endif
 }
 
 /*
@@ -196,12 +210,28 @@ void fdserial_send(unsigned char send_arg) {
 */
 
 unsigned char fdserial_recv() {
+	unsigned char c;
+
+#ifdef RING_BUFFER
+	// Wait until chars in buffer
+	while (fd_uart1.rx_head == fd_uart1.rx_tail) { }
+
+	c = fd_uart1.rx_buf[fd_uart1.rx_tail];
+
+	// Don't use the 'mod' operation because it is expensive.
+	// Also don't ever set rx_tail = RING_BUFFER.
+	if (fd_uart1.rx_tail == RING_BUFFER - 1) {
+		fd_uart1.rx_tail = 0;
+	} else {
+		fd_uart1.rx_tail ++;
+	}
+#else
 	// Wait until available
 	while (! fd_uart1.available) { }
-
-	unsigned char c = fd_uart1.recv_byte;
+	c = fd_uart1.recv_byte;
 	fd_uart1.recv_byte = 0;  // Reading nulls means you are probably doing something wrong
 	fd_uart1.available = 0;
+#endif
 
 	return c;
 }
@@ -329,8 +359,30 @@ ISR(TIMER1_COMPB_vect)
 
 		case 3: // Byte done, wait for high
 			if (read_bit) {
+#ifdef RING_BUFFER
+				// Put the latest char in the buffer
+				fd_uart1.rx_buf[fd_uart1.rx_head] = fd_uart1.recv_shift;
+
+				// Increment the buffer head
+				if (fd_uart1.rx_head == RING_BUFFER - 1) {
+					fd_uart1.rx_head = 0;
+				} else {
+					fd_uart1.rx_head ++;
+				}
+
+				// If buffer is full,
+				if (fd_uart1.rx_head == fd_uart1.rx_tail) {
+					// Increment rx_tail to drop oldest character
+					if (fd_uart1.rx_tail == RING_BUFFER - 1) {
+						fd_uart1.rx_tail = 0;
+					} else {
+						fd_uart1.rx_tail ++;
+					}
+				}
+#else
 				fd_uart1.recv_byte = fd_uart1.recv_shift;
 				fd_uart1.available = 1;
+#endif
 				fd_uart1.rx_state = 0;
 				_stop_rx();
 				_enable_int0();
