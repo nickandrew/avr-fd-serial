@@ -152,7 +152,6 @@ void fdserial_init(void) {
 	TCCR1 = ctc_mode | com_mode;
 	_starttimer();
 	_enable_int0();
-	_start_tx();
 }
 
 /*
@@ -256,10 +255,6 @@ void fdserial_delay(uint32_t duration) {
 
 ISR(TIMER1_COMPA_vect)
 {
-	// Toggle bits in PORTB to update them to the current rx_state
-	uint8_t x = (PORTB & 0x03) ^ fd_uart1.rx_state;
-	PORTB ^= x;
-
 	switch(fd_uart1.tx_state) {
 		case 0: // Idle
 			return;
@@ -291,7 +286,7 @@ ISR(TIMER1_COMPA_vect)
 		case 4: // Return to idle mode
 			fd_uart1.send_ready = 1;
 			fd_uart1.tx_state = 0;
-			// _stop_tx();
+			_stop_tx();
 			return;
 		case 5: // Timed delay
 			if (! --fd_uart1.delay) {
