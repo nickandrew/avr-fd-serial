@@ -147,7 +147,7 @@ void fdserial_init(void) {
 	OCR1C = SERIAL_TOP;
 
 	// Configure pin PORTB3 as an output, and raise it
-	DDRB |= 1<<PORTB3;
+	DDRB |= 1<<DDB3;
 	PORTB |= 1<<PORTB3;
 
 	_stoptimer();
