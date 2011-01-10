@@ -11,10 +11,11 @@
 # make filename.s = Just compile filename.c into the assembler code only
 # To rebuild project do "make clean" then "make all".
 
-safe:
-	@make libfdserial.a
-	@rm -f serial-example.elf
-	@make serial-example.hex
+everything: libfdserial.a libserial0.a example-recv.hex example-ring.hex example-send.hex
+
+install: libfdserial.a libserial0.a
+	cp libfdserial.a ../lib/
+	cp libserial0.a ../lib/
 
 # Microcontroller Type
 # MCU = attiny13
@@ -45,10 +46,6 @@ FORMAT = ihex
 
 # List C source files here. (C dependencies are automatically generated.)
 SRC = $(TARGET).c
-
-# If there is more than one source file, append them above, or modify and
-# uncomment the following:
-SRC += ir-sender.c fd-serial.c
 
 # You can also wrap lines by appending a backslash to the end of the line:
 #SRC += baz.c \
@@ -395,29 +392,16 @@ clean_list :
 
 # Listing of phony targets.
 .PHONY : all begin finish end sizebefore sizeafter gccversion coff extcoff \
-	clean clean_list program
+	clean clean_list program everything install
 
 
 LDFLAGS += -L. -lfdserial
 
-serial-example.elf:	serial-example.o
-	$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS) -L. -lfdserial
-	$(SIZE) -AC --mcu=$(MCU) $@
-
-example-send.elf:	example-send.o
-	$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS) -L. -lfdserial
-	$(SIZE) -AC --mcu=$(MCU) $@
-
-test-serial0.elf:	test-serial0.o
-	$(CC) $(ALL_CFLAGS) $^ --output $@ $(LDFLAGS) -L. -lserial0
-	$(SIZE) -AC --mcu=$(MCU) $@
-
+serial-example.elf:	serial-example.o libfdserial.a
+example-send.elf:	example-send.o libfdserial.a
+test-serial0.elf:	test-serial0.o libserial0.a
 example-recv.elf:	example-recv.o libfdserial.a
 example-ring.elf:	example-ring.o libfdserial.a
 
-main.elf:		main.o ir-sender.o
-
 libfdserial.a:		fd-serial.o
 libserial0.a:		serial0.o
-
-binaries:	serial-example.hex main.hex
