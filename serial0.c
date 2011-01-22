@@ -1,5 +1,5 @@
 /*
-**  Tullnet Full Duplex Serial UART
+**  Tullnet Half Duplex UART using timer0
 **  (C) 2010, Nick Andrew <nick@tull.net>
 **
 **  ATtiny85
