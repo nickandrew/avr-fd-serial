@@ -88,6 +88,10 @@ void serial0_init(void) {
 	DDRB |= S0_TX_PIN;
 	PORTB |= S0_TX_PIN;
 
+	// Set input pin and enable pullup
+	DDRB &= ~( S0_RX_PIN );
+	PORTB |= S0_RX_PIN;
+
 	_stoptimer();
 	TCCR0A = com_mode | wgm1_mode;
 	TCCR0B = wgm2_mode;

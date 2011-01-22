@@ -150,6 +150,10 @@ void fdserial_init(void) {
 	DDRB |= 1<<DDB3;
 	PORTB |= 1<<PORTB3;
 
+	// Configure pin PORTB2 as an input, and enable pullup
+	DDRB &= ~( 1<<DDB2 );
+	PORTB |= 1<<PORTB2;
+
 	_stoptimer();
 	TCCR1 = ctc_mode | com_mode;
 	_starttimer();
