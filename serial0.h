@@ -19,7 +19,7 @@
 struct serial0_uart {
 	volatile uint8_t state;
 	volatile unsigned char send_byte;
-	volatile uint8_t send_bits;
+	volatile uint8_t bits;
 	volatile uint8_t send_ready;   // 1 = can send a byte
 	volatile uint32_t delay;       // No of bit times to delay
 };

@@ -162,7 +162,7 @@ ISR(TIMER0_COMPB_vect)
 		case 1: // Send start bit
 			PORTB &= ~( S0_TX_PIN );
 			uart.state = 2;
-			uart.send_bits = 8;
+			uart.bits = 8;
 			break;
 
 		case 2: // Send a bit
@@ -173,7 +173,7 @@ ISR(TIMER0_COMPB_vect)
 			}
 			uart.send_byte >>= 1;
 
-			if (! --uart.send_bits) {
+			if (! --uart.bits) {
 				uart.state = 3;
 			}
 			break;
