@@ -19,7 +19,10 @@
 struct serial0_uart {
 	volatile uint8_t state;
 	volatile unsigned char send_byte;
+	volatile unsigned char recv_byte;
+	volatile unsigned char recv_shift;
 	volatile uint8_t bits;
+	volatile uint8_t available;
 	volatile uint8_t send_ready;   // 1 = can send a byte
 	volatile uint32_t delay;       // No of bit times to delay
 };
@@ -28,9 +31,15 @@ struct serial0_uart {
 
 void serial0_init(void);
 
+// If start bit detected, start RX timer and return true
+
+uint8_t serial0_startbit(void);
+
 uint8_t serial0_sendok(void);
 
 void serial0_send(unsigned char send_arg);
+
+unsigned char serial0_recv(void);
 
 // Set an alarm for a specified number of ms hence
 

@@ -25,6 +25,7 @@
 #define PRESCALER_DIVISOR 8
 // 8000000 / PRESCALER / 9600 = 104.1666
 #define SERIAL_TOP 103
+#define SERIAL_HALFBIT 52
 #else
 #error "Serial rates other than 9600 are not presently supported"
 #endif
@@ -38,8 +39,11 @@ static struct serial0_uart uart;
 **  are being received or sent.
 */
 
-static void _starttimer(void) {
-
+static void _starttimer(void)
+{
+	// Clear any pending timer interrupt
+	TIFR |= 1<<OCF0B;
+	// Start the timer counting
 	TCCR0B |= PRESCALER;
 }
 
@@ -71,6 +75,7 @@ void serial0_init(void) {
 
 	uart.send_ready = 1;
 	uart.state = 0;
+	uart.available = 0;
 
 	TCNT0 = 0;
 	OCR0A = SERIAL_TOP;
@@ -90,12 +95,46 @@ void serial0_init(void) {
 }
 
 /*
+**  serial0_available()
+**   Return true if a character has been received.
+*/
+
+uint8_t serial0_available(void) {
+	return uart.available;
+}
+
+/*
 **  serial0_sendok()
 **    Return true if the transmit interface is free to transmit a character
 */
 
 uint8_t serial0_sendok(void) {
 	return uart.send_ready;
+}
+
+/*
+**  serial0_startbit()
+**   If a start bit has been detected, start the RX state machine
+**   and return true.
+*/
+
+uint8_t serial0_startbit(void) {
+	if (PINB & S0_RX_PIN) {
+		return 0;
+	}
+
+	// This will ensure an interrupt half a bit time hence
+	uint8_t tcnt0 = TCNT0;
+	if (tcnt0 >= SERIAL_HALFBIT) {
+		OCR0B = tcnt0 - SERIAL_HALFBIT;
+	} else {
+		OCR0B = tcnt0 + SERIAL_HALFBIT;
+	}
+
+	uart.state = 6;
+	_starttimer();
+
+	return 1;
 }
 
 /*
@@ -113,6 +152,30 @@ void serial0_send(unsigned char send_arg) {
 	uart.state = 1; // Send start bit
 }
 
+/*
+**  c = serial0_recv()
+**   Return the received character.
+*/
+
+unsigned char serial0_recv(void) {
+	unsigned char c;
+
+	if (! uart.available) {
+		if (uart.state == 0) {
+			// Wait for a start bit
+			while (! serial0_startbit()) { }
+		}
+
+		// Wait for rx byte completion
+		while (! uart.available) { }
+	}
+
+	c = uart.recv_byte;
+	uart.recv_byte = 0;
+	uart.available = 0;
+
+	return c;
+}
 
 /*
 **  serial0_alarm(uint32_t duration)
@@ -154,6 +217,9 @@ void serial0_delay(uint32_t duration) {
 
 ISR(TIMER0_COMPB_vect)
 {
+	// Read the bit as early as possible, to try to hit the
+	// center mark
+	uint8_t read_bit = PINB & S0_RX_PIN;
 
 	switch(uart.state) {
 		case 0: // Idle
@@ -187,11 +253,47 @@ ISR(TIMER0_COMPB_vect)
 			uart.send_ready = 1;
 			uart.state = 0;
 			break;
+
 		case 5: // Timed delay
 			if (! --uart.delay) {
 				uart.send_ready = 1;
 				uart.state = 0;
 			}
 			break;
+
+		case 6: // Midpoint of start bit. Go on to first data bit.
+			uart.state = 7;
+			uart.bits = 8;
+			break;
+
+		case 7: // Reading a data bit
+			uart.recv_shift >>= 1;
+			if (read_bit) {
+				uart.recv_shift |= 0x80;
+			}
+
+			if (! --uart.bits) {
+				uart.state = 8;
+			}
+
+			break;
+
+		case 8: // Reading the stop bit
+			if (read_bit) {
+				uart.recv_byte = uart.recv_shift;
+				uart.available = 1;
+				uart.state = 0;
+				_stoptimer();
+			} else {
+				// Framing error
+				// Would like to wait for next byte at this point (later)
+				uart.recv_byte = 0;
+				uart.available = 2;
+				uart.state = 0;
+				_stoptimer();
+			}
+
+			break;
+
 	}
 }
