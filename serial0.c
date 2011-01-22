@@ -90,7 +90,7 @@ void serial0_init(void) {
 	uint8_t wgm2_mode = 0<<WGM02;
 
 	uart.send_ready = 1;
-	uart.tx_state = 0;
+	uart.state = 0;
 
 	// Configure PCINT0 to interrupt on falling edge
 	// MCUCR |= 1<<ISC01;
@@ -136,7 +136,7 @@ void serial0_send(unsigned char send_arg) {
 	OCR0B = TCNT0;
 	uart.send_ready = 0;
 	uart.send_byte = send_arg;
-	uart.tx_state = 1; // Send start bit
+	uart.state = 1; // Send start bit
 }
 
 
@@ -155,7 +155,7 @@ void serial0_alarm(uint32_t duration) {
 
 	uart.delay = duration;
 	uart.send_ready = 0;
-	uart.tx_state = 5;
+	uart.state = 5;
 }
 
 /*
@@ -181,13 +181,13 @@ void serial0_delay(uint32_t duration) {
 ISR(TIMER0_COMPB_vect)
 {
 
-	switch(uart.tx_state) {
+	switch(uart.state) {
 		case 0: // Idle
 			return;
 
 		case 1: // Send start bit
 			PORTB &= ~( 1<<PORTB3 );
-			uart.tx_state = 2;
+			uart.state = 2;
 			uart.send_bits = 8;
 			return;
 
@@ -200,23 +200,23 @@ ISR(TIMER0_COMPB_vect)
 			uart.send_byte >>= 1;
 
 			if (! --uart.send_bits) {
-				uart.tx_state = 3;
+				uart.state = 3;
 			}
 			return;
 
 		case 3: // Send stop bit
 			PORTB |= 1<<PORTB3;
-			uart.tx_state = 4;
+			uart.state = 4;
 			return;
 
 		case 4: // Return to idle mode
 			uart.send_ready = 1;
-			uart.tx_state = 0;
+			uart.state = 0;
 			return;
 		case 5: // Timed delay
 			if (! --uart.delay) {
 				uart.send_ready = 1;
-				uart.tx_state = 0;
+				uart.state = 0;
 			}
 			return;
 	}

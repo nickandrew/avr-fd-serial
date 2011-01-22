@@ -14,7 +14,7 @@
 #endif
 
 struct serial0_uart {
-	volatile uint8_t tx_state;
+	volatile uint8_t state;
 	volatile unsigned char send_byte;
 	volatile uint8_t send_bits;
 	volatile uint8_t send_ready;   // 1 = can send a byte
