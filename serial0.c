@@ -4,7 +4,7 @@
 **
 **  ATtiny85
 **     This code uses Timer/Counter 0
-**     RX connected to PB2 (INT0), pin 7
+**     RX connected to PB2, pin 7
 **     TX connected to PB3, pin 2
 **     Speed 9600 bps, full duplex
 */
@@ -53,24 +53,6 @@ static void _stoptimer(void) {
 	TCCR0B &= ~PRESCALER;
 }
 
-#ifdef INT_ZERO
-/*
-**  Enable PCINT0
-*/
-
-static void _enable_int0(void) {
-	GIMSK |= 1<<INT0;
-}
-
-/*
-**  Disable PCINT0
-*/
-
-static void _disable_int0(void) {
-	GIMSK &= ~( 1<<INT0 );
-}
-#endif
-
 /*
 **  Initialise the software UART.
 **
@@ -80,8 +62,6 @@ static void _disable_int0(void) {
 **    No output pin
 **    Frequency = 8000000 / 8 / 104 = 9615 bits/sec
 **    Prescaler = 8, Clock source = System clock, OCR0A = 103
-**  Configure PCINT0 so an interrupt occurs on the falling edge
-**    of PCINT0 (pin 7)
 */
 
 void serial0_init(void) {
@@ -91,9 +71,6 @@ void serial0_init(void) {
 
 	uart.send_ready = 1;
 	uart.state = 0;
-
-	// Configure PCINT0 to interrupt on falling edge
-	// MCUCR |= 1<<ISC01;
 
 	TCNT0 = 0;
 	OCR0A = SERIAL_TOP;
@@ -110,9 +87,6 @@ void serial0_init(void) {
 	TCCR0A = com_mode | wgm1_mode;
 	TCCR0B = wgm2_mode;
 	_starttimer();
-#ifdef INT_ZERO
-	_enable_int0();
-#endif
 }
 
 /*
@@ -221,11 +195,3 @@ ISR(TIMER0_COMPB_vect)
 			break;
 	}
 }
-
-#ifdef INT_ZERO
-// This is called on the falling edge of INT0 (pin 7)
-
-ISR(INT0_vect) {
-	// Nothing to do at present
-}
-#endif
