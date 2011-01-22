@@ -183,13 +183,13 @@ ISR(TIMER0_COMPB_vect)
 
 	switch(uart.state) {
 		case 0: // Idle
-			return;
+			break;
 
 		case 1: // Send start bit
 			PORTB &= ~( S0_TX_PIN );
 			uart.state = 2;
 			uart.send_bits = 8;
-			return;
+			break;
 
 		case 2: // Send a bit
 			if (uart.send_byte & 1) {
@@ -202,23 +202,23 @@ ISR(TIMER0_COMPB_vect)
 			if (! --uart.send_bits) {
 				uart.state = 3;
 			}
-			return;
+			break;
 
 		case 3: // Send stop bit
 			PORTB |= S0_TX_PIN;
 			uart.state = 4;
-			return;
+			break;
 
 		case 4: // Return to idle mode
 			uart.send_ready = 1;
 			uart.state = 0;
-			return;
+			break;
 		case 5: // Timed delay
 			if (! --uart.delay) {
 				uart.send_ready = 1;
 				uart.state = 0;
 			}
-			return;
+			break;
 	}
 }
 
