@@ -102,9 +102,9 @@ void serial0_init(void) {
 	// Interrupt per rx or tx bit
 	TIMSK |= 1<<OCIE0B;
 
-	// Output pin PB3, and raise it
-	DDRB |= 1<<PORTB3;
-	PORTB |= 1<<PORTB3;
+	// Set output pin and raise it
+	DDRB |= S0_TX_PIN;
+	PORTB |= S0_TX_PIN;
 
 	_stoptimer();
 	TCCR0A = com_mode | wgm1_mode;
@@ -186,16 +186,16 @@ ISR(TIMER0_COMPB_vect)
 			return;
 
 		case 1: // Send start bit
-			PORTB &= ~( 1<<PORTB3 );
+			PORTB &= ~( S0_TX_PIN );
 			uart.state = 2;
 			uart.send_bits = 8;
 			return;
 
 		case 2: // Send a bit
 			if (uart.send_byte & 1) {
-				PORTB |= 1<<PORTB3;
+				PORTB |= S0_TX_PIN;
 			} else {
-				PORTB &= ~( 1<<PORTB3 );
+				PORTB &= ~( S0_TX_PIN );
 			}
 			uart.send_byte >>= 1;
 
@@ -205,7 +205,7 @@ ISR(TIMER0_COMPB_vect)
 			return;
 
 		case 3: // Send stop bit
-			PORTB |= 1<<PORTB3;
+			PORTB |= S0_TX_PIN;
 			uart.state = 4;
 			return;
 

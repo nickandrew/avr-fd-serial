@@ -13,6 +13,9 @@
 #define SERIAL_RATE 9600
 #endif
 
+#define S0_RX_PIN   (1<<PINB2)
+#define S0_TX_PIN   (1<<PORTB3)
+
 struct serial0_uart {
 	volatile uint8_t state;
 	volatile unsigned char send_byte;
