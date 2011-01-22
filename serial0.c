@@ -6,7 +6,7 @@
 **     This code uses Timer/Counter 0
 **     RX connected to PB2, pin 7
 **     TX connected to PB3, pin 2
-**     Speed 9600 bps, full duplex
+**     Speed 9600 bps, half duplex
 */
 
 #include <avr/io.h>
