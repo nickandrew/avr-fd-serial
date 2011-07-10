@@ -20,7 +20,7 @@
 #endif
 
 #if SERIAL_RATE == 9600
-// Prescaler CK/4
+// Prescaler CK/8
 #define PRESCALER ( 1<<CS01 )
 #define PRESCALER_DIVISOR 8
 // 8000000 / PRESCALER / 9600 = 104.1666
