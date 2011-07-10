@@ -147,12 +147,12 @@ void fdserial_init(void) {
 	OCR1C = SERIAL_TOP;
 
 	// Configure pin PORTB3 as an output, and raise it
-	DDRB |= 1<<DDB3;
-	PORTB |= 1<<PORTB3;
+	DDRB |= S1_TX_PIN;
+	PORTB |= S1_TX_PIN;
 
 	// Configure pin PORTB2 as an input, and enable pullup
-	DDRB &= ~( 1<<DDB2 );
-	PORTB |= 1<<PORTB2;
+	DDRB &= ~( S1_RX_PIN );
+	PORTB |= S1_RX_PIN;
 
 	_stoptimer();
 	TCCR1 = ctc_mode | com_mode;
@@ -291,16 +291,16 @@ ISR(TIMER1_COMPA_vect)
 			return;
 
 		case 1: // Send start bit
-			PORTB &= ~( 1<<PORTB3 );
+			PORTB &= ~( S1_TX_PIN );
 			fd_uart1.tx_state = 2;
 			fd_uart1.send_bits = 8;
 			return;
 
 		case 2: // Send a bit
 			if (fd_uart1.send_byte & 1) {
-				PORTB |= 1<<PORTB3;
+				PORTB |= S1_TX_PIN;
 			} else {
-				PORTB &= ~( 1<<PORTB3 );
+				PORTB &= ~( S1_TX_PIN );
 			}
 			fd_uart1.send_byte >>= 1;
 
@@ -310,7 +310,7 @@ ISR(TIMER1_COMPA_vect)
 			return;
 
 		case 3: // Send stop bit
-			PORTB |= 1<<PORTB3;
+			PORTB |= S1_TX_PIN;
 			fd_uart1.tx_state = 4;
 			return;
 
@@ -336,7 +336,7 @@ ISR(TIMER1_COMPB_vect)
 {
 	// Read the bit as early as possible, to try to hit the
 	// center mark
-	uint8_t read_bit = PINB & (1<<PORTB2);
+	uint8_t read_bit = PINB & S1_RX_PIN;
 
 	switch(fd_uart1.rx_state) {
 		case 0: // Midpoint of start bit. Go on to first data bit.

@@ -17,6 +17,9 @@
 #define SERIAL_RATE 9600
 #endif
 
+#define S1_RX_PIN   (1<<PINB2)
+#define S1_TX_PIN   (1<<PORTB3)
+
 struct fd_uart {
 	volatile uint8_t tx_state;
 	volatile uint8_t rx_state;
