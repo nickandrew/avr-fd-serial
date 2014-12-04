@@ -16,7 +16,7 @@
 void set_cpu_8mhz(void) {
 	// Let's wind this sucker up to 8 MHz
 	CLKPR = 1<<CLKPCE;
-	CLKPR = 0<<CLKPS3 | 0<<CLKPS2 | 0<<CLKPS1 || 0<<CLKPS0;
+	CLKPR = 0<<CLKPS3 | 0<<CLKPS2 | 0<<CLKPS1 | 0<<CLKPS0;
 	// System clock is now 8 MHz
 }
 
